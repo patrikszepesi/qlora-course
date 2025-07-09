@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js" integrity="sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      (function() {
+        const originalConsole = window.console;
+        window.console = {
+          log: (...args) => {
+            originalConsole.log(...args);
+            window.parent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+          },
+          error: (...args) => {
+            originalConsole.error(...args);
+            window.parent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+          },
+          warn: (...args) => {
+            originalConsole.warn(...args);
+            window.parent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+          }
+        };
+
+        let requestId = 0;
+        let callbacksMap = new Map();
+        window.claude = {
+          complete: (prompt) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+            });
+          }
+        };
+
+        // Override global fetch
+        window.fetch = (url, init = {}) => {
+          return new Promise((resolve, reject) => {
+            const id = requestId++;
+            callbacksMap.set(id, { resolve, reject });
+            window.parent.postMessage({
+              type: 'proxyFetch',
+              id,
+              url,
+              init,
+            }, '*');
+          });
+        };
+
+        window.addEventListener('message', async (event) => {
+          if (event.data.type === 'takeScreenshot') {
+            const rootElement = document.getElementById('artifacts-component-root-html');
+            if (!rootElement) {
+              window.parent.postMessage({
+                type: 'screenshotError',
+                error: new Error('Root element not found'),
+              }, '*');
+            }
+            const screenshot = await htmlToImage.toPng(rootElement, {
+              imagePlaceholder:
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+            });
+            window.parent.postMessage({
+              type: 'screenshotData',
+              data: screenshot,
+            }, '*');
+          } else if (event.data.type === 'claudeComplete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.completion);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'proxyFetchResponse') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(new Response(event.data.body, {
+                status: event.data.status,
+                statusText: event.data.statusText,
+                headers: event.data.headers
+              }));
+            }
+            callbacksMap.delete(event.data.id);
+          }
+        });
+
+        window.addEventListener('click', (event) => {
+          const isEl = event.target instanceof HTMLElement;
+          if (!isEl) return;
+    
+          // find ancestor links
+          const linkEl = event.target.closest("a");
+          if (!linkEl || !linkEl.href) return;
+    
+          event.preventDefault();
+          event.stopImmediatePropagation();
+    
+          let linkUrl;
+          try {
+            linkUrl = new URL(linkEl.href);
+          } catch (error) {
+            return;
+          }
+    
+          if (linkUrl.hostname === window.location.hostname) return;
+    
+          window.parent.postMessage({
+            type: 'openExternal',
+            href: linkEl.href,
+          }, '*');
+      });
+
+        const originalOpen = window.open;
+        window.open = function (url) {
+          window.parent.postMessage({
+            type: "openExternal",
+            href: url,
+          }, "*");
+        };
+
+        window.addEventListener('error', (event) => {
+          window.parent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+        });
+      })();
+    </script>
+  
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double Quantization Process</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f6fa;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 40px;
+            font-size: 2em;
+        }
+        
+        .process-section {
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #34495e;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .step {
+            background: #3498db;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .step.weights { background: #3498db; }
+        .step.scales { background: #e67e22; }
+        .step.meta { background: #e74c3c; }
+        .step.save { background: #27ae60; }
+        
+        .arrow {
+            font-size: 2em;
+            color: #7f8c8d;
+            font-weight: bold;
+        }
+        
+        .divider {
+            height: 3px;
+            background: linear-gradient(to right, #3498db, #e67e22, #e74c3c);
+            margin: 30px 0;
+            border-radius: 2px;
+        }
+        
+        .inference-flow {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            border: 3px solid #8e44ad;
+        }
+        
+        .inference-title {
+            color: #8e44ad;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .reconstruction-step {
+            background: #8e44ad;
+            color: white;
+        }
+        
+        .final-step {
+            background: #27ae60;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .flow {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .arrow {
+                transform: rotate(90deg);
+                font-size: 1.5em;
+            }
+            
+            .step {
+                min-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body id="artifacts-component-root-html">
+    <div class="container">
+        <h1>🔄 Double Quantization Process</h1>
+        
+        <!-- Post-Training Quantization Phase -->
+        <div class="process-section">
+            <div class="section-title">📦 Post-Training Quantization Phase</div>
+            
+            <div class="flow">
+                <div class="step weights">Trained Model<br>(FP32 weights)</div>
+                <div class="arrow">→</div>
+                <div class="step weights">Quantize Weights<br>(4-bit integers)</div>
+                <div class="arrow">→</div>
+                <div class="step scales">Quantize Scales<br>(8-bit integers)</div>
+                <div class="arrow">→</div>
+                <div class="step save">Save Everything</div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px; padding: 15px; background: #ecf0f1; border-radius: 8px;">
+                <strong>What gets saved:</strong><br>
+                Quantized weights + Quantized scales + Meta-scales (FP32)<br>
+                <em>This compressed model can now be distributed and used!</em>
+            </div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <!-- Usage Phase -->
+        <div class="process-section">
+            <div class="inference-flow">
+                <div class="inference-title">🚀 Usage Phase (Reconstruction)</div>
+                
+                <div class="flow">
+                    <div class="step reconstruction-step">Step 1:<br>Dequantize Scales<br>(using meta-scales)</div>
+                    <div class="arrow">→</div>
+                    <div class="step reconstruction-step">Step 2:<br>Dequantize Weights<br>(using reconstructed scales)</div>
+                    <div class="arrow">→</div>
+                    <div class="step final-step">Ready for<br>Computation!</div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+                    <strong>Two-step reconstruction:</strong><br>
+                    Meta-scales → Scales → Weights
+                </div>
+                
+                <div style="background: #e8f5e8; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                    <div style="text-align: center; font-weight: bold; color: #27ae60; margin-bottom: 15px;">
+                        📚 When do we dequantize?
+                    </div>
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;">
+                        <div style="background: white; padding: 15px; border-radius: 6px; flex: 1; min-width: 200px; text-align: center;">
+                            <strong>🔧 Fine-tuning</strong><br>
+                            <small>Dequantize base weights for gradient computation (weights stay frozen)</small>
+                        </div>
+                        <div style="background: white; padding: 15px; border-radius: 6px; flex: 1; min-width: 200px; text-align: center;">
+                            <strong>⚡ Inference</strong><br>
+                            <small>Dequantize weights for final predictions</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Key Point -->
+        <div style="background: linear-gradient(45deg, #ff6b6b, #feca57); color: white; padding: 20px; border-radius: 10px; text-align: center; font-size: 1.1em; font-weight: bold; margin-top: 30px;">
+            💡 Key Point: Meta-scales (FP32) are needed to reconstruct everything else!
+        </div>
+    </div>
+</body>
+</html>
