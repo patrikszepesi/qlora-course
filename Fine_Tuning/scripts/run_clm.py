@@ -28,7 +28,7 @@ def parse_arge():
         "--dataset_path", type=str, default="lm_dataset", help="add any help statement if you want(optional parameter)"
     )
     parser.add_argument(
-        "--hf_token", type=str, default=HfFolder.get_token(), help="add any help statement if you want(optional parameter)"
+        "--hf_token", type=str, default="<ADD_YOUR_HF_TOKEN>", help="add any help statement if you want(optional parameter)"
     )
   
     parser.add_argument(
@@ -172,6 +172,7 @@ def training_function(args):
         else True,
         device_map="auto",
         quantization_config=bnb_config,
+        force_download=True,
     )
 
 
