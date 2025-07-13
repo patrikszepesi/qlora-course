@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 # --- API Configuration ---
-API_GATEWAY_URL = "https://ad7xmnrx00.execute-api.us-west-2.amazonaws.com/invoke-llm-endpoint"
+API_GATEWAY_URL = "https://hzc915pq24.execute-api.us-west-2.amazonaws.com/invoke-llm-endpoint"
 
 # --- App UI ---
 st.title("🤖 Mixtral-8x7B Inference with SageMaker")
@@ -63,8 +63,21 @@ if submitted and user_prompt:
             else:
                 # If no error, display the generated text
                 generated_text = response_body.get("generated_text", "No text was generated.")
-                st.subheader("Model Response:")
-                st.info(generated_text)
+               
+             
+                
+                # Option 3: Use markdown with scroll capability
+                st.markdown("### Full Response:")
+                st.markdown(f"""
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; border-radius: 5px;">
+                {generated_text}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Option 4: Show response length for debugging
+                st.caption(f"Response length: {len(generated_text)} characters")
+                
+               
 
         except requests.exceptions.HTTPError as http_err:
             st.error(f"HTTP error occurred: {http_err}")
