@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 # --- API Configuration ---
-API_GATEWAY_URL = "https://hzc915pq24.execute-api.us-west-2.amazonaws.com/invoke-llm-endpoint"
+API_GATEWAY_URL = "<REPLACE WITH YOUR API>"
 
 # --- App UI ---
 st.title("🤖 Mixtral-8x7B Inference with SageMaker")
